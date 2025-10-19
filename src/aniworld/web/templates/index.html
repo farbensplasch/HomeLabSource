@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AniWorld Downloader - Web Interface</title>
+    <title>Extern - Web Interface</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
@@ -33,7 +33,7 @@
     <nav class="navbar">
         <div class="nav-container">
             <div class="nav-brand">
-                <h1 id="nav-title" style="cursor: pointer;">AniWorld Downloader</h1>
+                <h1 id="nav-title" style="cursor: pointer;">Extern</h1>
                 <span class="version" id="version-display">Loading...</span>
             </div>
             <div class="nav-actions">
@@ -72,7 +72,7 @@
     <div class="container">
         <main>
             <div class="search-section">
-                <h2>Search Anime or Series</h2>
+                <h2>Suche nach einer Serie</h2>
                 <div class="site-selection">
                     <label class="site-option">
                         <input type="radio" name="site" value="aniworld.to" id="site-aniworld">
@@ -169,11 +169,18 @@
             <div class="modal-body">
                 <div class="download-info">
                     <p><strong>Anime:</strong> <span id="download-anime-title"></span></p>
-                    {% if not auth_enabled or (user and user.is_admin) %}<p><strong>Download Path:</strong> <span id="download-path"></span> <i class="fas fa-info-circle path-info-icon" title="You can change the download path by using the --output-dir /your/custom/path parameter"></i></p>{% endif %}
                 </div>
 
                 <!-- Download Settings -->
                 <div class="download-settings">
+                    {% if not auth_enabled or (user and user.is_admin) %}
+                    <div class="setting-group">
+                        <label for="download-path-select"><strong>Download Path:</strong></label>
+                        <select id="download-path-select" class="download-path-dropdown" title="Select the target directory for this download">
+                            <option value="">Loading...</option>
+                        </select>
+                    </div>
+                    {% endif %}
                     <div class="setting-group">
                         <label for="language-select"><strong>Language:</strong></label>
                         <select id="language-select" class="language-dropdown">

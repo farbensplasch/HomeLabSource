@@ -56,6 +56,7 @@ class DownloadQueueManager:
         provider: str,
         total_episodes: int,
         created_by: int = None,
+        download_path: Optional[str] = None,
     ) -> int:
         """Add a download to the queue"""
         with self._queue_lock:
@@ -79,6 +80,7 @@ class DownloadQueueManager:
                 "created_at": datetime.now(),
                 "started_at": None,
                 "completed_at": None,
+                "download_path": download_path if download_path else None,
             }
 
             self._active_downloads[queue_id] = download_job
@@ -161,6 +163,10 @@ class DownloadQueueManager:
         """Process a single download job"""
         queue_id = job["id"]
 
+        from ..parser import arguments
+
+        original_output_dir = getattr(arguments, "output_dir", None)
+
         try:
             # Mark as downloading
             self._update_download_status(
@@ -210,16 +216,24 @@ class DownloadQueueManager:
             failed_downloads = 0
             current_episode_index = 0
 
-            # Get download directory from arguments (which includes -o parameter)
-            from ..parser import arguments
-
-            download_dir = str(
-                getattr(
-                    config, "DEFAULT_DOWNLOAD_PATH", os.path.expanduser("~/Downloads")
+            # Determine the base download directory for this job
+            job_download_dir = job.get("download_path")
+            if job_download_dir:
+                download_dir = str(job_download_dir)
+            elif original_output_dir is not None:
+                download_dir = str(original_output_dir)
+            else:
+                download_dir = str(
+                    getattr(
+                        config, "DEFAULT_DOWNLOAD_PATH", os.path.expanduser("~/Downloads")
+                    )
                 )
-            )
-            if hasattr(arguments, "output_dir") and arguments.output_dir is not None:
-                download_dir = str(arguments.output_dir)
+
+            # Ensure the parser arguments use the correct directory for this job
+            try:
+                arguments.output_dir = Path(download_dir)
+            except TypeError:
+                arguments.output_dir = download_dir
 
             for anime in anime_list:
                 for episode in anime.episode_list:
@@ -425,6 +439,9 @@ class DownloadQueueManager:
             self._update_download_status(
                 queue_id, "failed", error_message=f"Download failed: {str(e)}"
             )
+        finally:
+            if hasattr(arguments, "output_dir"):
+                arguments.output_dir = original_output_dir
 
     def _get_next_queued_download(self):
         """Get the next download job in the queue"""

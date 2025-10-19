@@ -1889,7 +1889,8 @@ body[data-theme="dark"] .episode-progress-text {
 }
 
 .provider-dropdown,
-.language-dropdown {
+.language-dropdown,
+.download-path-dropdown {
     flex: 1;
     padding: 8px 12px;
     border: 1px solid var(--border-color);
@@ -1902,14 +1903,16 @@ body[data-theme="dark"] .episode-progress-text {
 }
 
 .provider-dropdown:focus,
-.language-dropdown:focus {
+.language-dropdown:focus,
+.download-path-dropdown:focus {
     outline: none;
     border-color: #667eea;
     box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
 }
 
 .provider-dropdown:hover,
-.language-dropdown:hover {
+.language-dropdown:hover,
+.download-path-dropdown:hover {
     border-color: var(--text-tertiary);
 }
 

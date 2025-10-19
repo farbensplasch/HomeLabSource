@@ -47,7 +47,7 @@ def _get_output_filename(anime: Anime, episode, sanitized_title: str) -> str:
         return (
             f"{sanitized_title} - Movie {episode.episode:03} - ({anime.language}).mp4"
         )
-    return f"{sanitized_title} - S{episode.season:02}E{episode.episode:03} - ({anime.language}).mp4"
+    return f"Season {episode.season:02}/{sanitized_title} - S{episode.season:02}E{episode.episode:03} - ({anime.language}).mp4"
 
 
 def _build_ytdl_options(
@@ -258,7 +258,7 @@ def download(anime: Anime, web_progress_callback: Optional[Callable] = None) -> 
             print(f"{direct_link}\n")
             continue
 
-        # Generate output path
+        # Generate output path with season-based structure
         output_file = _get_output_filename(anime, episode, sanitized_anime_title)
         output_path = Path(arguments.output_dir) / sanitized_anime_title / output_file
 

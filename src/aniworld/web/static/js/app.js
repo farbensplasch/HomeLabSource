@@ -1,7 +1,7 @@
-// AniWorld Downloader Web Interface JavaScript
+// Extern Web Interface JavaScript
 
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('AniWorld Downloader Web Interface loaded');
+    console.log('Extern Web Interface loaded');
 
     // Get UI elements
     const versionDisplay = document.getElementById('version-display');
@@ -34,6 +34,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const selectedEpisodeCount = document.getElementById('selected-episode-count');
     const providerSelect = document.getElementById('provider-select');
     const languageSelect = document.getElementById('language-select');
+    const downloadPathSelect = document.getElementById('download-path-select');
 
     // Queue elements
     const queueSection = document.getElementById('queue-section');
@@ -50,15 +51,22 @@ document.addEventListener('DOMContentLoaded', function() {
     let progressInterval = null;
     let availableProviders = [];
 
-    // Load version info and providers on page load
-    loadVersionInfo();
+    if (downloadPathSelect) {
+        downloadPathSelect.addEventListener('change', function() {
+            if (currentDownloadData) {
+                currentDownloadData.downloadPath = this.value || null;
+            }
+        });
+    }
 
     // Check for active downloads on page load
     checkQueueStatus();
     loadAvailableProviders();
 
-    // Load popular and new anime on page load
-    loadPopularAndNewAnime();
+    // Remove popular and new anime sections
+    if (popularNewSections) {
+        popularNewSections.remove();
+    }
 
     // Initialize theme (default is dark mode)
     initializeTheme();
@@ -342,7 +350,7 @@ document.addEventListener('DOMContentLoaded', function() {
             episode: episodeTitle,
             url: episodeUrl,
             site: detectedSite,
-            downloadPath: '/Downloads' // Default path - will be fetched from backend
+            downloadPath: null
         };
 
         // Reset selection state
@@ -363,16 +371,71 @@ document.addEventListener('DOMContentLoaded', function() {
         episodeTree.style.display = 'none';
         updateSelectedCount();
 
+        if (downloadPathSelect) {
+            downloadPathSelect.innerHTML = '<option value="">Loading...</option>';
+            downloadPathSelect.disabled = true;
+        }
+
         // Fetch download path from backend
         fetch('/api/download-path')
             .then(response => response.json())
             .then(data => {
-                currentDownloadData.downloadPath = data.path;
-                document.getElementById('download-path').textContent = data.path;
+                const options = Array.isArray(data.options) ? data.options : [];
+                const uniqueOptions = [];
+
+                options.forEach(path => {
+                    if (path && !uniqueOptions.includes(path)) {
+                        uniqueOptions.push(path);
+                    }
+                });
+
+                if (data.path && !uniqueOptions.includes(data.path)) {
+                    uniqueOptions.unshift(data.path);
+                }
+
+                if (downloadPathSelect) {
+                    downloadPathSelect.innerHTML = '';
+
+                    if (uniqueOptions.length === 0) {
+                        const option = document.createElement('option');
+                        const fallbackPath = data.path || '';
+                        option.value = fallbackPath;
+                        option.textContent = fallbackPath || 'Unavailable';
+                        downloadPathSelect.appendChild(option);
+                        downloadPathSelect.disabled = !fallbackPath;
+                        currentDownloadData.downloadPath = fallbackPath || null;
+                    } else {
+                        uniqueOptions.forEach(path => {
+                            const option = document.createElement('option');
+                            option.value = path;
+                            option.textContent = path;
+                            downloadPathSelect.appendChild(option);
+                        });
+                        downloadPathSelect.disabled = false;
+
+                        const initialPath = data.path && uniqueOptions.includes(data.path)
+                            ? data.path
+                            : uniqueOptions[0];
+
+                        if (initialPath) {
+                            downloadPathSelect.value = initialPath;
+                            currentDownloadData.downloadPath = initialPath;
+                        } else {
+                            downloadPathSelect.value = '';
+                            currentDownloadData.downloadPath = null;
+                        }
+                    }
+                } else if (data.path) {
+                    currentDownloadData.downloadPath = data.path;
+                }
             })
             .catch(error => {
                 console.error('Failed to fetch download path:', error);
-                document.getElementById('download-path').textContent = 'Unknown';
+                if (downloadPathSelect) {
+                    downloadPathSelect.innerHTML = '<option value="">Unavailable</option>';
+                    downloadPathSelect.disabled = true;
+                }
+                currentDownloadData.downloadPath = null;
             });
 
         // Fetch episodes for this series
@@ -757,6 +820,12 @@ document.addEventListener('DOMContentLoaded', function() {
             provider: selectedProvider,
             anime_title: currentDownloadData.anime
         };
+
+        if (currentDownloadData.downloadPath) {
+            requestPayload.download_path = currentDownloadData.downloadPath;
+        } else if (downloadPathSelect && downloadPathSelect.value) {
+            requestPayload.download_path = downloadPathSelect.value;
+        }
 
         fetch('/api/download', {
             method: 'POST',

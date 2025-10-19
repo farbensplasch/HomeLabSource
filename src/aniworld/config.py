@@ -243,7 +243,20 @@ USES_DEFAULT_PROVIDER = False
 # E.g. Watch, Download, Syncplay
 DEFAULT_ACTION = "Download"
 DEFAULT_ANISKIP = False
-DEFAULT_DOWNLOAD_PATH = pathlib.Path.home() / "Downloads"
+DEFAULT_DOWNLOAD_PATH = pathlib.Path("/mnt/Serien1/Series")
+
+# Additional download directories that can be selected from the web UI
+ADDITIONAL_DOWNLOAD_PATHS = (
+    pathlib.Path("/mnt/Serien1/Anime"),
+)
+
+# Build a tuple of unique download path options while keeping DEFAULT first
+_download_path_candidates = [DEFAULT_DOWNLOAD_PATH]
+for _candidate_path in ADDITIONAL_DOWNLOAD_PATHS:
+    if _candidate_path not in _download_path_candidates:
+        _download_path_candidates.append(_candidate_path)
+DOWNLOAD_PATH_OPTIONS = tuple(_download_path_candidates)
+del _download_path_candidates, _candidate_path
 DEFAULT_KEEP_WATCHING = False
 # German Dub, English Sub, German Sub
 DEFAULT_LANGUAGE = "German Sub"

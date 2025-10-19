@@ -67,6 +67,36 @@ class WebApp:
 
         return app
 
+    def _get_download_path_options(self) -> list[str]:
+        """Return available download path options with CLI overrides first."""
+        configured_paths = getattr(
+            config,
+            "DOWNLOAD_PATH_OPTIONS",
+            (getattr(config, "DEFAULT_DOWNLOAD_PATH", None),),
+        )
+        options = [
+            str(path)
+            for path in configured_paths
+            if path is not None and str(path).strip()
+        ]
+
+        if (
+            self.arguments
+            and hasattr(self.arguments, "output_dir")
+            and self.arguments.output_dir is not None
+        ):
+            cli_path = str(self.arguments.output_dir)
+            if cli_path.strip():
+                if cli_path in options:
+                    options.remove(cli_path)
+                options.insert(0, cli_path)
+
+        # Ensure we always have at least one option by falling back to DEFAULT
+        if not options:
+            options.append(str(getattr(config, "DEFAULT_DOWNLOAD_PATH", "")))
+
+        return options
+
     def _require_api_auth(self, f):
         """Decorator to require authentication for API routes."""
 
@@ -713,6 +743,25 @@ class WebApp:
                         }
                     ), 400
 
+                available_paths = self._get_download_path_options()
+                selected_download_path = data.get("download_path")
+                if isinstance(selected_download_path, str):
+                    selected_download_path = selected_download_path.strip()
+                if selected_download_path:
+                    if selected_download_path not in available_paths:
+                        return jsonify(
+                            {
+                                "success": False,
+                                "error": "Invalid download path selected",
+                            }
+                        ), 400
+                else:
+                    selected_download_path = (
+                        available_paths[0]
+                        if available_paths
+                        else str(config.DEFAULT_DOWNLOAD_PATH)
+                    )
+
                 # Add to download queue
                 queue_id = self.download_manager.add_download(
                     anime_title=anime_title,
@@ -721,6 +770,7 @@ class WebApp:
                     provider=provider,
                     total_episodes=total_episodes,
                     created_by=current_user["id"] if current_user else None,
+                    download_path=selected_download_path,
                 )
 
                 if not queue_id:
@@ -750,19 +800,26 @@ class WebApp:
         def api_download_path():
             """Get download path endpoint."""
             try:
-                # Use arguments.output_dir if available, otherwise fall back to default
-                download_path = str(config.DEFAULT_DOWNLOAD_PATH)
-                if (
-                    self.arguments
-                    and hasattr(self.arguments, "output_dir")
-                    and self.arguments.output_dir is not None
-                ):
-                    download_path = str(self.arguments.output_dir)
+                options = self._get_download_path_options()
+                download_path = (
+                    options[0]
+                    if options
+                    else str(getattr(config, "DEFAULT_DOWNLOAD_PATH", ""))
+                )
 
-                return jsonify({"path": download_path})
+                return jsonify({"path": download_path, "options": options})
             except Exception as err:
                 logging.error(f"Failed to get download path: {err}")
-                return jsonify({"path": str(config.DEFAULT_DOWNLOAD_PATH)}), 500
+                fallback_path = str(getattr(config, "DEFAULT_DOWNLOAD_PATH", ""))
+                return (
+                    jsonify(
+                        {
+                            "path": fallback_path,
+                            "options": [fallback_path] if fallback_path else [],
+                        }
+                    ),
+                    500,
+                )
 
         @self.app.route("/api/episodes", methods=["POST"])
         @self._require_api_auth
