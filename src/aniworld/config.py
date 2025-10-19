@@ -243,7 +243,7 @@ USES_DEFAULT_PROVIDER = False
 # E.g. Watch, Download, Syncplay
 DEFAULT_ACTION = "Download"
 DEFAULT_ANISKIP = False
-DEFAULT_DOWNLOAD_PATH = pathlib.Path("/mnt/Serien1/Series")
+DEFAULT_DOWNLOAD_PATH = pathlib.Path("/mnt/Serien1/Serien")
 
 # Additional download directories that can be selected from the web UI
 ADDITIONAL_DOWNLOAD_PATHS = (
